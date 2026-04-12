@@ -1,0 +1,41 @@
+name: auto-update
+
+on:
+    schedule:
+        -   cron: '0 * * * *'
+
+    workflow_dispatch:
+
+jobs:
+    update:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+        steps:
+            -   name: check out repository
+                uses: actions/checkout@v6
+
+            -   name: set up Python
+                uses: actions/setup-python@v6
+                with:
+                    python-version: '3.12'
+                    cache: 'pip'
+
+            -   name: install Python dependencies
+                run: |
+                    python -m pip install -U pip
+                    python -m pip install -r requirements.txt
+
+            -   name: update card art
+                run: |
+                    python download-card-art.py
+
+            -   name: get current time
+                id: date
+                run: echo "NOW=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+            -   name: commit and push changes
+                uses: stefanzweifel/git-auto-commit-action@v7
+                id: commit
+                with:
+                    commit_message: "chore: bump data version to ${{ steps.date.outputs.NOW }}"
