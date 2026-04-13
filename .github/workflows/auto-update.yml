@@ -15,6 +15,7 @@ jobs:
             -   name: check out repository
                 uses: actions/checkout@v6
                 with:
+                    fetch-depth: 2
                     sparse-checkout: |
                         .github
                         .gitignore
@@ -51,3 +52,33 @@ jobs:
                 id: commit
                 with:
                     commit_message: "chore: bump data version to ${{ steps.date.outputs.NOW }}"
+
+            -   name: update releases
+                env:
+                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                if: steps.commit.outputs.changes_detected == 'true' || github.event_name == 'workflow_dispatch'
+                run: |
+                    if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                        CHANGED_YEARS=$(ls card-art/ 2>/dev/null || true)
+                    else
+                        CHANGED_YEARS=$(git diff --name-only HEAD^ HEAD | grep '^card-art/' | cut -d'/' -f2 | sort -u || true)
+                    fi
+
+                    if [ -z "$CHANGED_YEARS" ]; then
+                        exit 0
+                    fi
+
+                    for YEAR in $CHANGED_YEARS; do
+                        ZIP_NAME="card-art-${YEAR}.zip"
+                        echo "Processing $ZIP_NAME..."
+
+                        gh release download assets -p "$ZIP_NAME" || true
+
+                        if [ -d "card-art/$YEAR" ]; then
+                            zip -jruq "$ZIP_NAME" "card-art/$YEAR"
+                            gh release upload assets "$ZIP_NAME" --clobber || \
+                            gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}"
+                        fi
+
+                        rm -f "$ZIP_NAME"
+                    done
