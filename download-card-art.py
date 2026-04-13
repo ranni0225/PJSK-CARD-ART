@@ -2,6 +2,7 @@
 
 
 import datetime
+import json
 import logging
 import sys
 
@@ -11,6 +12,47 @@ from concurrent.futures import as_completed, ThreadPoolExecutor
 from pathlib import Path
 
 from requests.adapters import HTTPAdapter
+
+# ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
+# HELPER FUNCTIONS
+# ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
+
+TRANSLATE_MAP = str.maketrans({
+    "*": "＊",
+    "/": "／",
+    ":": "：",
+    "<": "＜",
+    ">": "＞",
+    "?": "？",
+    "\"": "＂",
+    "\\": "＼",
+    "|": "｜"
+})
+
+
+def ReplaceInvalidCharacters(s: str) -> str:
+    return s.translate(TRANSLATE_MAP)
+
+
+def LoadJson(filePath: Path) -> dict:
+    try:
+        return json.load(filePath.open("r", encoding="utf-8"))
+    except Exception as e:
+        logging.warning(f"Failed to load json: {e}", exc_info=True)
+        return {}
+
+
+def SaveJson(filePath: Path, data: dict) -> bool:
+    try:
+        filePath.parent.mkdir(parents=True, exist_ok=True)
+
+        with filePath.open("w", encoding="utf-8") as file:
+            json.dump(data, file, ensure_ascii=False, indent=4, sort_keys=True)
+            return True
+    except Exception as e:
+        logging.error(f"Failed to save json: {e}", exc_info=True)
+        return False
+
 
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 # GLOBAL CONFIGURATION
@@ -33,6 +75,9 @@ session = requests.Session()
 session.mount("http://", HTTPAdapter(pool_connections=WORKER_COUNT, pool_maxsize=WORKER_COUNT, max_retries=RETRY_COUNT))
 session.mount("https://", HTTPAdapter(pool_connections=WORKER_COUNT, pool_maxsize=WORKER_COUNT, max_retries=RETRY_COUNT))
 
+manifestFile = Path("manifest.json")
+manifest = LoadJson(manifestFile)
+
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 # CONSTANTS
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -43,26 +88,6 @@ GAME_CHARACTER_DATA_URL = "https://raw.githubusercontent.com/Sekai-World/sekai-m
 CARD_ART_URL_PREFIX = "https://storage.sekai.best/sekai-jp-assets/character/member/"
 CARD_ART_STAGE1_URL_SUFFIX = "/card_normal.png"
 CARD_ART_STAGE2_URL_SUFFIX = "/card_after_training.png"
-
-# ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
-# HELPER FUNCTIONS
-# ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
-
-TRANSLATE_MAP = str.maketrans({
-    "*": "＊",
-    "/": "／",
-    ":": "：",
-    "<": "＜",
-    ">": "＞",
-    "?": "？",
-    "\"": "＂",
-    "\\": "＼",
-    "|": "｜"
-})
-
-
-def ReplaceInvalidCharacters(s: str) -> str:
-    return s.translate(TRANSLATE_MAP)
 
 JST_TIMEZONE = datetime.timezone(datetime.timedelta(hours=9))
 
@@ -108,7 +133,7 @@ logging.info("Downloading card art...")
 def DownloadCardArt(url: str, filePath: Path) -> bool:
     filePath.parent.mkdir(parents=True, exist_ok=True)
 
-    if filePath.exists() and filePath.stat().st_size > 0:
+    if manifest.get(filePath.name):
         return True
 
     try:
@@ -123,6 +148,8 @@ def DownloadCardArt(url: str, filePath: Path) -> bool:
         with filePath.open("wb") as file:
             for chunk in response.iter_content(chunk_size=4096):
                 file.write(chunk)
+
+        manifest[filePath.name] = url
 
         return True
     except Exception as e:
@@ -168,3 +195,5 @@ with ThreadPoolExecutor(max_workers=WORKER_COUNT) as executor:
             future.result()
         except Exception as e:
             logging.error(f"Exception occurred during processing card #{futureToCards[future]['id']}: {e}", exc_info=True)
+
+SaveJson(manifestFile, manifest)
