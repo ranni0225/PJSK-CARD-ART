@@ -68,6 +68,8 @@ jobs:
                         exit 0
                     fi
 
+                    HAS_ERROR=0
+
                     for YEAR in $CHANGED_YEARS; do
                         ZIP_NAME="card-art-${YEAR}.zip"
                         echo "Processing $ZIP_NAME..."
@@ -75,10 +77,23 @@ jobs:
                         gh release download assets -p "$ZIP_NAME" || true
 
                         if [ -d "card-art/$YEAR" ]; then
+                            set +e
                             zip -jruq "$ZIP_NAME" "card-art/$YEAR"
-                            gh release upload assets "$ZIP_NAME" --clobber || \
-                            gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}"
+                            ZIP_EXIT=$?
+                            set -e
+
+                            if [ $ZIP_EXIT -eq 0 ]; then
+                                gh release upload assets "$ZIP_NAME" --clobber || \
+                                gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}" || \
+                                {echo "Error: gh release upload/create failed"; HAS_ERROR=1;}
+                            elif [ $ZIP_EXIT -ne 12 ]; then
+                                {echo "Error: zip failed with exit code $ZIP_EXIT"; HAS_ERROR=1;}
+                            fi
                         fi
 
                         rm -f "$ZIP_NAME"
                     done
+
+                    if [ $HAS_ERROR -ne 0 ]; then
+                        exit 1
+                    fi
