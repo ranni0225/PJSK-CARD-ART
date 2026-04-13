@@ -64,6 +64,7 @@ TRANSLATE_MAP = str.maketrans({
 def ReplaceInvalidCharacters(s: str) -> str:
     return s.translate(TRANSLATE_MAP)
 
+JST_TIMEZONE = datetime.timezone(datetime.timedelta(hours=9))
 
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 # DOWNLOADER LOGIC
@@ -137,7 +138,7 @@ def ProcessSingleCard(card: dict):
     cardId = card.get("id", "")
     cardAssetId = card.get("assetbundleName", "")
 
-    cardReleaseTime = datetime.datetime.fromtimestamp(card.get("releaseAt", 0) / 1000).strftime("%Y%m%d")
+    cardReleaseTime = datetime.datetime.fromtimestamp(card.get("releaseAt", 0) / 1000, tz=JST_TIMEZONE).strftime("%Y%m%d")
     cardRarity = card.get("cardRarityType", "rarity_none").split('_')[-1].lower()
     cardName = card.get("prefix", "")
     cardCharacterId = card.get("characterId", "")

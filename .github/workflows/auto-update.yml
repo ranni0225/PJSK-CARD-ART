@@ -37,7 +37,7 @@ jobs:
 
             -   name: get current time
                 id: date
-                run: echo "NOW=$(TZ='Asia/Shanghai' date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+                run: echo "NOW=$(TZ='Asia/Tokyo' date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
             -   name: commit and push changes
                 uses: stefanzweifel/git-auto-commit-action@v7
