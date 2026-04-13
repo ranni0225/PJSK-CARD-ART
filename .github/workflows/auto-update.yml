@@ -14,6 +14,13 @@ jobs:
         steps:
             -   name: check out repository
                 uses: actions/checkout@v6
+                with:
+                    sparse-checkout: |
+                        .github
+                        .gitignore
+                        download-card-art.py
+                        manifest.json
+                        requirements.txt
 
             -   name: configure git
                 run: |
