@@ -3,10 +3,11 @@
 
 import asyncio
 import datetime
-import httpx
 import json
 import logging
 import sys
+
+import httpx
 
 from pathlib import Path
 
