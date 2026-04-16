@@ -6,26 +6,15 @@ import datetime
 import json
 import logging
 import sys
+from pathlib import Path
 
 import httpx
-
-from pathlib import Path
 
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 # HELPER FUNCTIONS
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 
-TRANSLATE_MAP = str.maketrans({
-    "*": "＊",
-    "/": "／",
-    ":": "：",
-    "<": "＜",
-    ">": "＞",
-    "?": "？",
-    "\"": "＂",
-    "\\": "＼",
-    "|": "｜"
-})
+TRANSLATE_MAP = str.maketrans({"*": "＊", "/": "／", ":": "：", "<": "＜", ">": "＞", "?": "？", '"': "＂", "\\": "＼", "|": "｜"})
 
 
 def ReplaceInvalidCharacters(s: str) -> str:
@@ -90,12 +79,11 @@ JST_TIMEZONE = datetime.timezone(datetime.timedelta(hours=9))
 # DOWNLOADER LOGIC
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 
+
 async def main():
     logging.info("Creating required directories...")
 
-    requiredDirectories = [
-        CARD_ART_DIRECTORY
-    ]
+    requiredDirectories = [CARD_ART_DIRECTORY]
     for requiredDirectory in requiredDirectories:
         requiredDirectory.mkdir(parents=True, exist_ok=True)
 
@@ -141,7 +129,7 @@ async def main():
                         return True
                     response.raise_for_status()
 
-                    logging.info(f"Downloading \"{filePath.name}\"")
+                    logging.info(f'Downloading "{filePath.name}"')
 
                     with filePath.open("wb") as file:
                         async for chunk in response.aiter_bytes(chunk_size=4096):
@@ -151,7 +139,7 @@ async def main():
 
                 return True
             except Exception as e:
-                logging.error(f"Failed to download card art \"{url}\" to \"{filePath}\": {e}", exc_info=True)
+                logging.error(f'Failed to download card art "{url}" to "{filePath}": {e}', exc_info=True)
 
                 if filePath.exists():
                     filePath.unlink()
@@ -163,7 +151,7 @@ async def main():
             cardAssetId = card.get("assetbundleName", "")
 
             cardReleaseTime = datetime.datetime.fromtimestamp(card.get("releaseAt", 0) / 1000, tz=JST_TIMEZONE).strftime("%Y%m%d")
-            cardRarity = card.get("cardRarityType", "rarity_none").split('_')[-1].lower()
+            cardRarity = card.get("cardRarityType", "rarity_none").split("_")[-1].lower()
             cardName = card.get("prefix", "")
             cardCharacterId = card.get("characterId", "")
 
@@ -179,9 +167,15 @@ async def main():
 
             cardFileBaseName = ReplaceInvalidCharacters(f"[{cardReleaseTime}][{cardCharacterName}][{cardRarity}] {cardName}")
 
-            await DownloadCardArt(f"{CARD_ART_URL_PREFIX}{cardAssetId}{CARD_ART_STAGE1_URL_SUFFIX}", CARD_ART_DIRECTORY / cardReleaseYear / f"{cardFileBaseName}.png")
+            await DownloadCardArt(
+                f"{CARD_ART_URL_PREFIX}{cardAssetId}{CARD_ART_STAGE1_URL_SUFFIX}",
+                CARD_ART_DIRECTORY / cardReleaseYear / f"{cardFileBaseName}.png",
+            )
             if cardIsTrainable:
-                await DownloadCardArt(f"{CARD_ART_URL_PREFIX}{cardAssetId}{CARD_ART_STAGE2_URL_SUFFIX}", CARD_ART_DIRECTORY / cardReleaseYear / f"{cardFileBaseName} [+].png")
+                await DownloadCardArt(
+                    f"{CARD_ART_URL_PREFIX}{cardAssetId}{CARD_ART_STAGE2_URL_SUFFIX}",
+                    CARD_ART_DIRECTORY / cardReleaseYear / f"{cardFileBaseName} [+].png",
+                )
 
         semaphore = asyncio.Semaphore(WORKER_COUNT)
 

@@ -2,7 +2,7 @@ name: auto-update
 
 on:
     schedule:
-        -   cron: '0 * * * *'
+        - cron: "0 * * * *"
 
     workflow_dispatch:
 
@@ -12,88 +12,94 @@ jobs:
         permissions:
             contents: write
         steps:
-            -   name: check out repository
-                uses: actions/checkout@v6
-                with:
-                    fetch-depth: 2
-                    sparse-checkout: |
-                        .github
-                        .gitignore
-                        download-card-art.py
-                        manifest.json
-                        requirements.txt
+            - name: check out repository
+              uses: actions/checkout@v6
+              with:
+                  fetch-depth: 2
+                  sparse-checkout: |
+                      .github
+                      .gitignore
+                      download-card-art.py
+                      manifest.json
+                      requirements.txt
 
-            -   name: configure git
-                run: |
-                    git config --global core.fileMode false
-                    git config --global --add safe.directory "*"
+            - name: configure git
+              run: |
+                  git config --global core.fileMode false
+                  git config --global --add safe.directory "*"
 
-            -   name: set up Python
-                uses: actions/setup-python@v6
-                with:
-                    python-version: '3.12'
-                    cache: 'pip'
+            - name: set up Python
+              uses: actions/setup-python@v6
+              with:
+                  python-version: "3.12"
+                  cache: "pip"
 
-            -   name: install Python dependencies
-                run: |
-                    python -m pip install -U pip
-                    python -m pip install -r requirements.txt
+            - name: install Python dependencies
+              run: |
+                  python -m pip install -U pip
+                  python -m pip install -r requirements.txt
 
-            -   name: update card art
-                run: |
-                    python download-card-art.py
+            - name: update card art
+              run: |
+                  python download-card-art.py
 
-            -   name: get current time
-                id: date
-                run: echo "NOW=$(TZ='Asia/Tokyo' date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+            - name: get current time
+              id: date
+              run: echo "NOW=$(TZ='Asia/Tokyo' date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
-            -   name: commit and push changes
-                uses: stefanzweifel/git-auto-commit-action@v7
-                id: commit
-                with:
-                    commit_message: "chore: bump data version to ${{ steps.date.outputs.NOW }}"
+            - name: run pre-commit
+              uses: pre-commit/action@v3.0.1
+              with:
+                  extra_args: --all-files
+              continue-on-error: true
 
-            -   name: update releases
-                env:
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                if: steps.commit.outputs.changes_detected == 'true' || github.event_name == 'workflow_dispatch'
-                run: |
-                    if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-                        CHANGED_YEARS=$(ls card-art/ 2>/dev/null || true)
-                    else
-                        CHANGED_YEARS=$(git diff --name-only HEAD^ HEAD | grep '^card-art/' | cut -d'/' -f2 | sort -u || true)
-                    fi
+            - name: commit and push changes
+              uses: stefanzweifel/git-auto-commit-action@v7
+              id: commit
+              with:
+                  commit_message: "chore: bump data version to ${{ steps.date.outputs.NOW }}"
 
-                    if [ -z "$CHANGED_YEARS" ]; then
-                        exit 0
-                    fi
+            - name: update releases
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              if: steps.commit.outputs.changes_detected == 'true' || github.event_name == 'workflow_dispatch'
+              run: |
+                  if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+                      CHANGED_YEARS=$(ls card-art/ 2>/dev/null || true)
+                  else
+                      CHANGED_YEARS=$(git diff --name-only HEAD^ HEAD | grep '^card-art/' | cut -d'/' -f2 | sort -u || true)
+                  fi
 
-                    HAS_ERROR=0
+                  if [ -z "$CHANGED_YEARS" ]; then
+                      exit 0
+                  fi
 
-                    for YEAR in $CHANGED_YEARS; do
-                        ZIP_NAME="card-art-${YEAR}.zip"
-                        echo "Processing $ZIP_NAME..."
+                  HAS_ERROR=0
 
-                        gh release download assets -p "$ZIP_NAME" || true
+                  for YEAR in $CHANGED_YEARS; do
+                      ZIP_NAME="card-art-${YEAR}.zip"
+                      echo "Processing $ZIP_NAME..."
 
-                        if [ -d "card-art/$YEAR" ]; then
-                            set +e
-                            zip -jruq "$ZIP_NAME" "card-art/$YEAR"
-                            ZIP_EXIT=$?
-                            set -e
+                      gh release download assets -p "$ZIP_NAME" || true
 
-                            if [ $ZIP_EXIT -eq 0 ]; then
-                                gh release upload assets "$ZIP_NAME" --clobber || \
-                                gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}" || \
-                                { echo "Error: gh release upload/create failed"; HAS_ERROR=1; }
-                            elif [ $ZIP_EXIT -ne 12 ]; then
-                                { echo "Error: zip failed with exit code $ZIP_EXIT"; HAS_ERROR=1; }
-                            fi
-                        fi
+                      if [ -d "card-art/$YEAR" ]; then
+                          set +e
+                          zip -jruq "$ZIP_NAME" "card-art/$YEAR"
+                          ZIP_EXIT=$?
+                          set -e
 
-                        rm -f "$ZIP_NAME"
-                    done
+                          if [ $ZIP_EXIT -eq 0 ]; then
+                              gh release upload assets "$ZIP_NAME" --clobber || \
+                              gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}" || \
+                              { echo "Error: gh release upload/create failed"; HAS_ERROR=1; }
+                          elif [ $ZIP_EXIT -ne 12 ]; then
+                              { echo "Error: zip failed with exit code $ZIP_EXIT"; HAS_ERROR=1; }
+                          fi
+                      fi
 
-                    if [ $HAS_ERROR -ne 0 ]; then
-                        exit 1
-                    fi
+                      rm -f "$ZIP_NAME"
+                  done
+
+                  if [ $HAS_ERROR -ne 0 ]; then
+                      exit 1
+                  fi
