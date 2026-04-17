@@ -58,6 +58,7 @@ jobs:
               id: commit
               with:
                   commit_message: "chore: bump data version to ${{ steps.date.outputs.NOW }}"
+                  add_options: "--sparse"
 
             - name: update releases
               env:
