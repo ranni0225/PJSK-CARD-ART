@@ -91,7 +91,7 @@ jobs:
 
                           if [ $ZIP_EXIT -eq 0 ]; then
                               gh release upload assets "$ZIP_NAME" --clobber || \
-                              gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "Updated on ${{ steps.date.outputs.NOW }}" || \
+                              gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "released on ${{ steps.date.outputs.NOW }}" || \
                               { echo "Error: gh release upload/create failed"; HAS_ERROR=1; }
                           elif [ $ZIP_EXIT -ne 12 ]; then
                               { echo "Error: zip failed with exit code $ZIP_EXIT"; HAS_ERROR=1; }
