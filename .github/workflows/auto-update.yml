@@ -68,7 +68,7 @@ jobs:
                   if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
                       CHANGED_YEARS=$(ls card-art/ 2>/dev/null || true)
                   else
-                      CHANGED_YEARS=$(git diff --name-only HEAD^ HEAD | grep '^card-art/' | cut -d'/' -f2 | sort -u || true)
+                      CHANGED_YEARS=$(git diff --name-only HEAD^ HEAD | grep 'card-art/' | cut -d'/' -f2 | sort -u || true)
                   fi
 
                   if [ -z "$CHANGED_YEARS" ]; then
