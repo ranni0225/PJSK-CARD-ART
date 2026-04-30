@@ -12,6 +12,9 @@ jobs:
         permissions:
             contents: write
         steps:
+            - name: get current year
+              run: echo "CURRENT_YEAR=$(TZ='Asia/Tokyo' date +'%Y')" >> $GITHUB_ENV
+
             - name: check out repository
               uses: actions/checkout@v6
               with:
@@ -22,6 +25,7 @@ jobs:
                       download-card-art.py
                       manifest.json
                       requirements.txt
+                      card-art/${{ env.CURRENT_YEAR }}
 
             - name: configure git
               run: |
