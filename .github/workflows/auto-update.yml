@@ -6,6 +6,10 @@ on:
 
     workflow_dispatch:
 
+concurrency:
+    group: auto-update
+    cancel-in-progress: false
+
 jobs:
     update:
         runs-on: ubuntu-latest
