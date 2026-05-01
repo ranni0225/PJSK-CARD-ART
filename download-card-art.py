@@ -51,11 +51,6 @@ DEFAULT_TIMEOUT = 15
 
 CARD_ART_DIRECTORY = Path("card-art")
 
-logging.addLevelName(logging.DEBUG, "d")
-logging.addLevelName(logging.INFO, "i")
-logging.addLevelName(logging.WARNING, "w")
-logging.addLevelName(logging.ERROR, "e")
-logging.addLevelName(logging.CRITICAL, "c")
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S", stream=sys.stdout)
 
 manifestFile = Path("manifest.json")
