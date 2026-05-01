@@ -101,6 +101,7 @@ jobs:
                               gh release upload assets "$ZIP_NAME" --clobber || \
                               gh release create assets "$ZIP_NAME" --title "Card Art Assets" --notes "released on ${{ steps.date.outputs.NOW }}" || \
                               { echo "Error: gh release upload/create failed"; HAS_ERROR=1; }
+                              gh release edit assets --notes "last updated on ${{ steps.date.outputs.NOW }}"
                           elif [ $ZIP_EXIT -ne 12 ]; then
                               { echo "Error: zip failed with exit code $ZIP_EXIT"; HAS_ERROR=1; }
                           fi
