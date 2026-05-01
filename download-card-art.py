@@ -53,9 +53,6 @@ CARD_ART_DIRECTORY = Path("card-art")
 
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S", stream=sys.stdout)
 
-manifestFile = Path("manifest.json")
-manifest = LoadJson(manifestFile)
-
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
 # CONSTANTS
 # ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== =====
@@ -76,6 +73,9 @@ JST_TIMEZONE = datetime.timezone(datetime.timedelta(hours=9))
 
 
 async def main():
+    manifestFile = Path("manifest.json")
+    manifest = LoadJson(manifestFile)
+
     logging.info("Creating required directories...")
 
     requiredDirectories = [CARD_ART_DIRECTORY]
@@ -94,7 +94,7 @@ async def main():
             cards = response.json()
         except Exception as e:
             logging.error(f"Failed to fetch card data: {e}", exc_info=True)
-            sys.exit(-1)
+            sys.exit(1)
 
         logging.info("Fetching game character data...")
 
@@ -104,7 +104,7 @@ async def main():
             gameCharacters = response.json()
         except Exception as e:
             logging.error(f"Failed to fetch game character data: {e}", exc_info=True)
-            sys.exit(-1)
+            sys.exit(1)
 
         characterNames = {
             gameCharacter["id"]: f"{gameCharacter.get('firstName', '')} {gameCharacter.get('givenName', '')}".strip() for gameCharacter in gameCharacters
@@ -184,7 +184,8 @@ async def main():
         tasks = [_ProcessSingleCard(card) for card in cards]
         await asyncio.gather(*tasks)
 
-    SaveJson(manifestFile, manifest)
+    if not SaveJson(manifestFile, manifest):
+        sys.exit(1)
 
 
 if __name__ == "__main__":
