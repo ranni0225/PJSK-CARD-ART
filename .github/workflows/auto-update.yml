@@ -17,7 +17,10 @@ jobs:
             contents: write
         steps:
             - name: get current year
-              run: echo "CURRENT_YEAR=$(TZ='Asia/Tokyo' date +'%Y')" >> $GITHUB_ENV
+              run: |
+                  YEAR=$(TZ='Asia/Tokyo' date +'%Y')
+                  echo "CURRENT_YEAR=$YEAR" >> $GITHUB_ENV
+                  echo "NEXT_YEAR=$((YEAR+1))" >> $GITHUB_ENV
 
             - name: check out repository
               uses: actions/checkout@v6
@@ -30,6 +33,7 @@ jobs:
                       manifest.json
                       requirements.txt
                       card-art/${{ env.CURRENT_YEAR }}
+                      card-art/${{ env.NEXT_YEAR }}
 
             - name: configure git
               run: |
